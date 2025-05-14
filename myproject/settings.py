@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',  # Simple JWT
     'accounts',  # 자신의 앱 (accounts)
     'corsheaders',  # CORS 헤더 설정
+     'drf_yasg',
 ]
 
 # REST Framework 설정

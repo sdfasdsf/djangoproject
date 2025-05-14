@@ -3,11 +3,12 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.throttling import AnonRateThrottle
-from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth import authenticate, login, logout
+from rest_framework_simplejwt.tokens import RefreshToken ,AccessToken
+from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
+from django.contrib.auth import authenticate, login, logout , get_user_model
 from django.http import JsonResponse
 from django.shortcuts import redirect
-from .serializers import SignupSerializer  # 회원가입을 위한 Serializer
+from .serializers import SignupSerializer ,LoginSerializer # 회원가입을 위한 Serializer
 import logging
 import traceback
 
@@ -41,33 +42,56 @@ class Signup(APIView):
                 # 성공 메시지
                 return Response({
                     'username': user.username,
-                    'nickname': user.nickname
+                    'nickname': user.nickname,
+                    'password': user.password,
                 })
+                
+                     # ⚠️ 유효성 검사 실패 시 에러 분석 후 일관된 에러 포맷 반환
+            errors = serializer.errors
 
-            # 유효성 검사 실패 시 에러 메시지 표시
+            if 'username' in errors:
+                return Response({
+                "error": {
+                    "code": "USER_ALREADY_EXISTS",
+                    "message": "이미 가입된 사용자입니다."
+                }
+                }, status=400)
+
+            if 'nickname' in errors:
+                return Response({
+                    "error": {
+                        "code": "NICKNAME_ALREADY_EXISTS",
+                        "message": "이 닉네임은 이미 사용 중입니다."
+                    }
+            }, status=400)
+
+        # 기타 다른 유효성 오류
             return Response({
-                'message': '회원가입 페이지입니다.',
-                'errors': serializer.errors
+                "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "입력값이 유효하지 않습니다.",
+                    "details": errors
+                }
             }, status=400)
 
         except ValueError as ve:
-            # 사용자 생성 실패 시 처리
             logger.error(f"회원가입 오류: {str(ve)}")
             return Response({
                 'error': {'code': 'USER_CREATION_FAILED', 'message': str(ve)}
             }, status=500)
 
         except Exception as e:
-            # 예외 발생 시 로깅 및 에러 메시지
-            error_message = traceback.format_exc()  # 예외의 스택 트레이스를 문자열로 가져옴
-            logger.error(f"회원가입 중 오류 발생: {error_message}")  # 오류 메시지 로깅
+            error_message = traceback.format_exc()
+            logger.error(f"회원가입 중 오류 발생: {error_message}")
             return Response({
-                'message': '회원가입 처리 중 오류가 발생했습니다.',
-                'errors': {'server': ['서버 오류가 발생했습니다.']},
+                'error': {
+                    'code': 'SERVER_ERROR',
+                    'message': '회원가입 처리 중 서버 오류가 발생했습니다.'
+                }
             }, status=500)
 
 
-# 로그인 처리 API
+
 class Login(APIView):
     permission_classes = [AllowAny]  # 인증이 필요하지 않음
     throttle_classes = [AnonRateThrottle]  # Rate limiting 적용
@@ -78,11 +102,13 @@ class Login(APIView):
         - 아이디(username) 및 비밀번호로 사용자 인증
         - JWT 토큰 생성
         """
-        username = request.data.get("username")
-        password = request.data.get("password")
-
-        if not username or not password:
-            return JsonResponse({"error": "아이디와 비밀번호를 입력해 주세요."}, status=400)
+        # Serializer를 통해 요청 데이터 유효성 검증
+        serializer = LoginSerializer(data=request.data)
+        if not serializer.is_valid():
+            return JsonResponse({"error": "잘못된 요청입니다.", "details": serializer.errors}, status=400)
+        
+        username = serializer.validated_data['username']
+        password = serializer.validated_data['password']
 
         # 사용자 인증
         user = authenticate(request, username=username, password=password)
@@ -92,9 +118,16 @@ class Login(APIView):
             refresh = RefreshToken.for_user(user)
             access_token = str(refresh.access_token)
 
+            # 로그인 성공 시 토큰 반환
             return JsonResponse({"token": access_token}, status=200)
         else:
-            return JsonResponse({"error": "아이디 또는 비밀번호가 올바르지 않습니다."}, status=400)
+            # 로그인 실패 시 오류 메시지 반환
+            return JsonResponse({
+                "error": {
+                    "code": "INVALID_CREDENTIALS",
+                    "message": "아이디 또는 비밀번호가 올바르지 않습니다."
+                }
+            }, status=400)
 
 
 # 로그아웃 처리 API
@@ -147,3 +180,58 @@ class CheckLoginStatus(APIView):
         return Response({
             "error": "로그인이 필요합니다."
         }, status=401)
+        
+        
+        
+class CheckAuth(APIView):
+    permission_classes = []
+
+    def post(self, request):
+        token = request.data.get("token")
+        if not token:
+            return Response({
+                "error": {
+                    "code": "TOKEN_NOT_FOUND",
+                    "message": "토큰이 없습니다."
+                }
+            }, status=400)
+
+        try:
+            access_token = AccessToken(token)
+            user_id = access_token['user_id']
+
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            user = User.objects.get(id=user_id)
+
+            return Response({
+                "message": "유효한 토큰입니다.",
+                "user": {
+                    "username": user.username,
+                    "nickname": user.nickname
+                }
+            }, status=200)
+
+        except InvalidToken:
+            return Response({
+                "error": {
+                    "code": "INVALID_TOKEN",
+                    "message": "토큰이 유효하지 않습니다."
+                }
+            }, status=400)
+
+        except TokenError as e:
+            if "Token is expired" in str(e):
+                return Response({
+                    "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "토큰이 만료되었습니다."
+                    }
+                }, status=400)
+            else:
+                return Response({
+                    "error": {
+                        "code": "INVALID_TOKEN",
+                        "message": "토큰이 유효하지 않습니다."
+                    }
+                }, status=400)

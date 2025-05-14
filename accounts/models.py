@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
+from django.utils import timezone
 
 # 사용자 관리자
 class CustomUserManager(BaseUserManager):
@@ -24,21 +25,23 @@ class CustomUserManager(BaseUserManager):
 class User(AbstractUser):
     nickname = models.CharField('닉네임', max_length=150, unique=True)  # unique 설정을 추가하여 중복되지 않도록 함
 
-    # groups와 user_permissions 필드의 related_name을 수정하여 충돌을 방지
-    groups = models.ManyToManyField(
-        'auth.Group',
-        related_name='accounts_user_set',  # 'auth.User.groups'와의 충돌을 방지
-        blank=True
-    )
-
-    user_permissions = models.ManyToManyField(
-        'auth.Permission',
-        related_name='accounts_user_permissions_set',  # 'auth.User.user_permissions'와의 충돌을 방지
-        blank=True
-    )
-
     # CustomUserManager를 사용하도록 설정
     objects = CustomUserManager()
 
     def __str__(self):
         return self.username
+
+
+# JWT 토큰을 저장하는 모델
+class UserToken(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)  # 사용자와 1:1 관계
+    token = models.CharField(max_length=255)  # JWT 토큰 저장
+    created_at = models.DateTimeField(auto_now_add=True)  # 토큰 생성 시간
+    expired_at = models.DateTimeField()  # 토큰 만료 시간
+
+    def __str__(self):
+        return f"Token for {self.user.username}"
+
+    def is_expired(self) -> bool:
+        """토큰이 만료되었는지 확인하는 메소드"""
+        return timezone.now() > self.expired_at

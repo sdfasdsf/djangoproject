@@ -6,5 +6,8 @@ urlpatterns = [
     path('login/', views.Login.as_view(), name='login'),  # 로그인
     path('logout/', views.Logout.as_view(), name='logout'),  # 로그아웃
     path('check-login-status/', views.CheckLoginStatus.as_view(),name='check-login-status'), # 로그인 상태 확인
+    path('checkauth/', views.CheckAuth.as_view(), name='checkauth'),  # 토큰 만료 확인
+
+
  
 ]
