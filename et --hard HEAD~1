@@ -1,0 +1,30 @@
+[33mcommit d581cbde42bf49ce885c6c0062f963ffd449cf7b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m
+Merge: ae0bcc4 46e0691
+Author: ai_8삼성 인정배 <43261890+sdfasdsf@users.noreply.github.com>
+Date:   Thu May 15 05:19:14 2025 +0900
+
+    Merge branch 'main' of https://github.com/sdfasdsf/asdfqwer
+
+[33mcommit ae0bcc40b5ff1bee42fe94214166d830d1488625[m
+Author: ai_8삼성 인정배 <43261890+sdfasdsf@users.noreply.github.com>
+Date:   Thu May 15 05:17:57 2025 +0900
+
+    Add .gitignore and ignore unnecessary files
+
+[33mcommit 46e06913920859819cefb71c5bc71b122a16cc6b[m[33m ([m[1;31morigin/main[m[33m)[m
+Author: ai_8삼성 인정배 <43261890+sdfasdsf@users.noreply.github.com>
+Date:   Sun Mar 16 23:41:12 2025 +0900
+
+    Update README.md
+
+[33mcommit 552253d72781085fe864f2072faba64f76adef6c[m
+Author: ai_8삼성 인정배 <43261890+sdfasdsf@users.noreply.github.com>
+Date:   Sun Mar 16 23:31:33 2025 +0900
+
+    Create README.md
+
+[33mcommit 6d284834bb2e838a8280565a1983cf021c9d5e90[m[33m ([m[1;32mmaster[m[33m)[m
+Author: ai_8삼성 인정배 <43261890+sdfasdsf@users.noreply.github.com>
+Date:   Sun Mar 16 23:21:09 2025 +0900
+
+    docs accounts 앱폴더를 전체 수정 postman 구현 가능
